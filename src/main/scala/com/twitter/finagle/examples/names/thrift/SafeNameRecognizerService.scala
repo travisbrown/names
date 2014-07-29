@@ -2,8 +2,8 @@ package com.twitter.finagle.examples.names.thrift
 
 import com.twitter.concurrent.AsyncQueue
 import com.twitter.finagle.examples.names.NameRecognizer
-import com.twitter.util.{Future, FuturePool, Return, Throw, Try}
-import java.util.concurrent.{ ArrayBlockingQueue, BlockingQueue, Executors }
+import com.twitter.util.{Future, FuturePool}
+import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, Executors}
 
 /**
  * A simple service implementation that implements the trait defined by Scrooge.
@@ -25,6 +25,9 @@ class SafeNameRecognizerService(recognizers: BlockingQueue[NameRecognizer], futu
       val locations = result.locations
       val organizations = result.organizations
     }
+  } rescue {
+    case exception => Future.exception(
+      NameRecognizerException("Error while processing document: " + exception.getMessage))
   }
 }
 
@@ -32,7 +35,7 @@ object SafeNameRecognizerService {
   /**
    * An asynchronous constructor that creates a future pool, uses it to
    * initialize a pool of recognizers, and then creates a service with both
-   * pools. 
+   * pools.
    */
   def create(lang: String, poolSize: Int): Future[NameRecognizerService[Future]] = {
     val futurePool = FuturePool(Executors.newFixedThreadPool(poolSize))

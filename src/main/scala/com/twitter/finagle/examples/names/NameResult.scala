@@ -21,9 +21,9 @@ object NameResult {
   /**
    * We often want to combine partial results as we process a body of text.
    * Defining a [[com.twitter.algebird.Monoid]] here allows us to take advantage
-   * of the abstractions provider by Algebird.
+   * of the abstractions provided by Algebird.
    */
-  implicit object nameResultMonoid extends Monoid[NameResult] {
+  implicit object NameResultMonoid extends Monoid[NameResult] {
     val zero: NameResult = NameResult(Seq.empty, Seq.empty, Seq.empty)
 
     def plus(r1: NameResult, r2: NameResult): NameResult = {
