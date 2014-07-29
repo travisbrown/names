@@ -24,10 +24,10 @@ the following lines to start a server running locally on port 9090:
 ``` scala
 import com.twitter.finagle.Thrift
 import com.twitter.finagle.examples.names.thrift._
-import com.twitter.util.{Future, Return, Throw}
 
-SafeNameRecognizerService.create("en", 4) onSuccess { service =>
+val server = SafeNameRecognizerService.create("en", 4) map { service =>
   Thrift.serveIface("localhost:9090", service)
+} onSuccess { _ =>
   println("Server started successfully")
 } onFailure { exc =>
   println("Could not start the server: " + exc)
@@ -64,6 +64,31 @@ People: Sherlock Holmes
 Places: Afghanistan
 ```
 
-As we'd expect.
+As we'd expect. If you need more control over the configuration of the client,
+you can use the more explicit `ClientBuilder` approach:
+
+``` scala
+import com.twitter.conversions.time._
+import com.twitter.finagle.builder.ClientBuilder
+import com.twitter.finagle.thrift.ThriftClientFramedCodec
+
+val transport = ClientBuilder()
+  .name("nerServer")
+  .hosts("localhost:9090")
+  .codec(ThriftClientFramedCodec())
+  .hostConnectionLimit(1)
+  .timeout(1.second)
+  .build()
+
+val client = new NameRecognizerService.FinagledClient(transport)
+
+client.findNames(doc) onSuccess { response =>
+  println("People: " + response.persons.mkString(", "))
+  println("Places: " + response.locations.mkString(", "))
+}
+```
+
+This should produce the same result, but will fail if the server doesn't respond
+within a second.
 
 [1]: http://twitter.github.io/scrooge/
