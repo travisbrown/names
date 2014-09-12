@@ -1,6 +1,5 @@
 package com.twitter.finagle.examples.names
 
-import com.twitter.algebird.Monoid
 import com.twitter.util.Try
 import java.io.File
 import opennlp.tools.namefind.TokenNameFinder
@@ -29,7 +28,7 @@ class NameRecognizer(
     val sentences = sentenceDetector.sentDetect(document)
     val tokenized = sentences map { sentence => tokenizer.tokenize(sentence) }
     val results = tokenized map { tokens => findNamesInTokens(tokens) }
-    val result = Monoid.sum(results)
+    val result = NameResult.sum(results)
 
     clearAfterDocument()
 

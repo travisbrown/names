@@ -2,7 +2,7 @@ package com.twitter.finagle.examples.names.thrift
 
 import com.twitter.concurrent.AsyncQueue
 import com.twitter.finagle.examples.names.NameRecognizer
-import com.twitter.util.{Future, FuturePool}
+import com.twitter.util.{Future, FuturePool, NonFatal}
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, Executors}
 
 /**
@@ -16,14 +16,17 @@ class SafeNameRecognizerService(recognizers: BlockingQueue[NameRecognizer], futu
   extends NameRecognizerService[Future] {
   def findNames(document: String): Future[NameRecognizerResult] = futurePool {
     val recognizer = recognizers.take()
-    val result = recognizer.findNames(document)
 
-    recognizers.offer(recognizer)
+    try {
+      val result = recognizer.findNames(document)
 
-    new NameRecognizerResult {
-      val persons = result.persons
-      val locations = result.locations
-      val organizations = result.organizations
+      new NameRecognizerResult {
+        val persons = result.persons
+        val locations = result.locations
+        val organizations = result.organizations
+      }
+    } finally {
+      recognizers.offer(recognizer)      
     }
   } rescue {
     case exception => Future.exception(
