@@ -13,11 +13,11 @@ You'll need to download the OpenNLP model files before you can run the project
 tests or examples:
 
 ```
-./download-models.sh
+sh ./download-models.sh
 ```
 
-Next you can run `./sbt console` from the project root. This will use
-[Scrooge][1] to generate our Thrift service and client traits, and then it'll
+Now when you run `./sbt console` from the project root, [Scrooge][1] will
+generate our Thrift service and client traits, and then it'll
 compile them along with the rest of our code and start a Scala console. Paste
 the following lines to start a server running locally on port 9090:
 
@@ -37,6 +37,9 @@ val server = SafeNameRecognizerService.create("en", 4) map { service =>
 Now you can create a client to speak to the server:
 
 ``` scala
+import com.twitter.finagle.Thrift
+import com.twitter.finagle.examples.names.thrift._
+
 val client =
   Thrift.newIface[NameRecognizerService.FutureIface]("localhost:9090")
 

@@ -1,7 +1,5 @@
 package com.twitter.finagle.examples.names
 
-import com.twitter.algebird.Monoid
-
 /**
  * Represents the result of running name recognition on a text.
  */
@@ -15,22 +13,25 @@ case class NameResult(persons: Seq[String], locations: Seq[String], organization
       case (name, occurrences) => name -> occurrences.size
     }
   }
+
+  /**
+   * Combine with another set of results.
+   */
+  def ++(other: NameResult): NameResult = {
+    NameResult(
+      persons ++ other.persons,
+      locations ++ other.locations,
+      organizations ++ other.organizations)
+  }
 }
 
 object NameResult {
+  val Empty = NameResult(Seq.empty, Seq.empty, Seq.empty)
+
   /**
    * We often want to combine partial results as we process a body of text.
-   * Defining a [[com.twitter.algebird.Monoid]] here allows us to take advantage
-   * of the abstractions provided by Algebird.
    */
-  implicit object NameResultMonoid extends Monoid[NameResult] {
-    val zero: NameResult = NameResult(Seq.empty, Seq.empty, Seq.empty)
-
-    def plus(r1: NameResult, r2: NameResult): NameResult = {
-      NameResult(
-        r1.persons ++ r2.persons,
-        r1.locations ++ r2.locations,
-        r1.organizations ++ r2.organizations)
-    }
+  def sum(results: Seq[NameResult]) = results.foldLeft(Empty) {
+    case (acc, result) => acc ++ result
   }
 }

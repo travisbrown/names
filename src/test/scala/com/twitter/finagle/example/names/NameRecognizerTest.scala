@@ -6,12 +6,8 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.junit.JUnitRunner
 
 @RunWith(classOf[JUnitRunner])
-class NameRecognizerTest extends FunSuite with BeforeAndAfter {
-  var recognizer: Try[NameRecognizer] = _
-
-  before {
-    recognizer = NameRecognizer.create("en")
-  }
+class NameRecognizerTest extends FunSuite {
+  val recognizer: Try[NameRecognizer] = NameRecognizer.create("en")
 
   test("NameRecognizer should load successfully") {
     assert(recognizer.isReturn)
