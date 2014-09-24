@@ -23,14 +23,14 @@ the following lines to start a server running locally on port 9090:
 
 ``` scala
 import com.twitter.finagle.Thrift
-import com.twitter.finagle.examples.names.thrift._
+import com.twitter.finagle.examples.names.thriftscala._
 
-val server = SafeNameRecognizerService.create("en", 4) map { service =>
+val server = SafeNameRecognizerService.create(Seq("en"), 4, 4) map { service =>
   Thrift.serveIface("localhost:9090", service)
 } onSuccess { _ =>
   println("Server started successfully")
-} onFailure { exc =>
-  println("Could not start the server: " + exc)
+} onFailure { ex =>
+  println("Could not start the server: " + ex)
 }
 ```
 
@@ -38,7 +38,7 @@ Now you can create a client to speak to the server:
 
 ``` scala
 import com.twitter.finagle.Thrift
-import com.twitter.finagle.examples.names.thrift._
+import com.twitter.finagle.examples.names.thriftscala._
 
 val client =
   Thrift.newIface[NameRecognizerService.FutureIface]("localhost:9090")
@@ -54,9 +54,11 @@ coming on the top of a natural Bohemianism of disposition, has made me rather
 more lax than befits a medical man.
 """
 
-client.findNames(doc) onSuccess { response =>
+client.findNames("en", doc) onSuccess { response =>
   println("People: " + response.persons.mkString(", "))
   println("Places: " + response.locations.mkString(", "))
+} onFailure { ex =>
+  println("Something bad happened: " + ex.getMessage)
 }
 ```
 
@@ -67,8 +69,29 @@ People: Sherlock Holmes
 Places: Afghanistan
 ```
 
-As we'd expect. If you need more control over the configuration of the client,
-you can use the more explicit `ClientBuilder` approach:
+As we'd expect. We can also attempt to find names in a Spanish document, since
+while we didn't preload the Spanish models when we created our service, we did
+download them, so the service will be able to load them if asked:
+
+``` scala
+val esDoc = """
+Alrededor de 1902 fue el primero en aplicar una descarga eléctrica en un tubo
+sellado y con gas neón con la idea de crear una lámpara. Inspirado en parte por
+la invención de Daniel McFarlan Moore, la lámpara de Moore, Claude inventó la
+lámpara de neón mediante la descarga eléctrica de un gas inerte comprobando que
+el brillo era considerable.
+"""
+
+client.findNames("es", esDoc) onSuccess { response =>
+  println("People: " + response.persons.mkString(", "))
+  println("Places: " + response.locations.mkString(", "))
+} onFailure { ex =>
+  println("Something bad happened: " + ex.getMessage)
+}
+```
+
+If you need more control over the configuration of the client, you can use the
+more explicit `ClientBuilder` approach:
 
 ``` scala
 import com.twitter.conversions.time._
@@ -85,9 +108,11 @@ val transport = ClientBuilder()
 
 val client = new NameRecognizerService.FinagledClient(transport)
 
-client.findNames(doc) onSuccess { response =>
+client.findNames("en", doc) onSuccess { response =>
   println("People: " + response.persons.mkString(", "))
   println("Places: " + response.locations.mkString(", "))
+} onFailure { ex =>
+  println("Something bad happened: " + ex.getMessage)
 }
 ```
 

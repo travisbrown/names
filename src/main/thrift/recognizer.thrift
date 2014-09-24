@@ -1,4 +1,5 @@
-namespace java com.twitter.finagle.examples.names.thrift
+namespace java com.twitter.finagle.examples.names.thriftjava
+#@namespace scala com.twitter.finagle.examples.names.thriftscala
 
 struct NameRecognizerResult {
   1: list<string> persons;
@@ -11,5 +12,6 @@ exception NameRecognizerException {
 }
 
 service NameRecognizerService {
-  NameRecognizerResult findNames(1: string document) throws(1: NameRecognizerException ex)
+  NameRecognizerResult findNames(1: string lang, 2: string document)
+    throws(1: NameRecognizerException ex)
 }

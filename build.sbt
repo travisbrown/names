@@ -4,6 +4,8 @@ resolvers += "twttr" at "http://maven.twttr.com/"
 
 com.twitter.scrooge.ScroogeSBT.newSettings
 
+scalacOptions ++= Seq("-feature", "-language:higherKinds")
+
 libraryDependencies ++= Seq(
   "com.twitter" %% "finagle-core" % "6.20.0",
   "com.twitter" %% "finagle-stats" % "6.20.0",

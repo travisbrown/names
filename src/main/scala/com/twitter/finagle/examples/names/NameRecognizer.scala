@@ -1,10 +1,11 @@
 package com.twitter.finagle.examples.names
 
-import com.twitter.util.Try
+import com.twitter.finagle.examples.names.thriftscala.NameRecognizerException
+import com.twitter.util.{Throw, Try}
 import java.io.File
 import opennlp.tools.namefind.TokenNameFinder
 import opennlp.tools.sentdetect.SentenceDetector
-import opennlp.tools.tokenize.Tokenizer
+import opennlp.tools.tokenize.{Tokenizer, TokenizerME}
 import opennlp.tools.util.Span
 
 /**
@@ -69,37 +70,59 @@ class NameRecognizer(
 
 object NameRecognizer extends ModelLoader(new File("models")) {
   /**
-   * Creates a recognizer given a language identifier and (optionally) paths to
-   * the OpenNLP models to use.
+   * Creates a specified number of identical recognizers given a language
+   * identifier and paths to the OpenNLP models.
    */
   def create(
     lang: String,
-    sentenceDetectorModel: File = null,
-    tokenizerModel: File = null,
-    personalNameModel: File = null,
-    locationNameModel: File = null,
-    organizationNameModel: File = null): Try[NameRecognizer] = {
-
-    val sdModelFile = Option(sentenceDetectorModel).getOrElse(defaultSentenceDetectorModel(lang))
-    val tkModelFile = Option(tokenizerModel).getOrElse(defaultTokenizerModel(lang))
-    val pnModelFile = Option(personalNameModel).getOrElse(defaultPersonalNameModel(lang))
-    val lnModelFile = Option(locationNameModel).getOrElse(defaultLocationNameModel(lang))
-    val onModelFile = Option(organizationNameModel).getOrElse(defaultOrganizationNameModel(lang))
+    count: Int,
+    sentenceDetectorFile: File,
+    tokenizerFile: File,
+    personalNameFile: File,
+    locationNameFile: File,
+    organizationNameFile: File): Try[Seq[NameRecognizer]] = {
 
     for {
-      sentenceDetector       <- loadSentenceDetector(sdModelFile)
-      tokenizer              <- loadTokenizer(tkModelFile)
-      personalNameFinder     <- loadNameFinder(pnModelFile)
-      locationNameFinder     <- loadNameFinder(lnModelFile)
-      organizationNameFinder <- loadNameFinder(onModelFile)
+      sentenceDetectorModel       <- loadSentenceDetectorModel(sentenceDetectorFile)
+      tokenizerModel              <- loadTokenizerModel(tokenizerFile)
+      personalNameFinderModel     <- loadNameFinderModel(personalNameFile)
+      locationNameFinderModel     <- loadNameFinderModel(locationNameFile)
+      organizationNameFinderModel <- loadNameFinderModel(organizationNameFile)
     } yield {
-      new NameRecognizer(
-        lang,
-        sentenceDetector,
-        tokenizer,
-        personalNameFinder,
-        locationNameFinder,
-        organizationNameFinder)
+      Seq.fill(count) {
+        new NameRecognizer(
+          lang,
+          createSentenceDetector(sentenceDetectorModel),
+          createTokenizer(tokenizerModel),
+          createNameFinder(personalNameFinderModel),
+          createNameFinder(locationNameFinderModel),
+          createNameFinder(organizationNameFinderModel))
+      }
     }
+  } rescue {
+    case ex: Throwable => Throw(
+      NameRecognizerException(s"Unable to load models for language $lang")
+    )
   }
+
+  /**
+   * Creates a specified number of identical recognizers given a language
+   * identifier (using the default paths to the OpenNLP models).
+   */
+  def create(lang: String, count: Int): Try[Seq[NameRecognizer]] =
+    create(
+      lang,
+      count,
+      defaultSentenceDetectorModel(lang),
+      defaultTokenizerModel(lang),
+      defaultPersonalNameModel(lang),
+      defaultLocationNameModel(lang),
+      defaultOrganizationNameModel(lang))
+
+  /**
+   * Creates a recognizer given a language identifier (using the default paths
+   * to the OpenNLP models).
+   */
+  def create(lang: String): Try[NameRecognizer] =
+    create(lang, 1) map { recognizers => recognizers.head }
 }
