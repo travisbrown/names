@@ -1,9 +1,9 @@
 package com.twitter.finagle.examples.names.thriftscala
 
-import com.twitter.concurrent.AsyncQueue
+import com.twitter.concurrent.{AsyncQueue, NamedPoolThreadFactory}
 import com.twitter.finagle.examples.names.NameRecognizer
 import com.twitter.util.{Future, FuturePool, NonFatal}
-import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, Executors}
+import java.util.concurrent.Executors
 
 /**
  * A simple service implementation that implements the trait defined by Scrooge.
@@ -15,7 +15,7 @@ import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue, Executors}
  * blocking the Finagle thread).
  */
 class SafeNameRecognizerService(
-  recognizers: Map[String, BlockingQueue[NameRecognizer]],
+  recognizers: Map[String, AsyncQueue[NameRecognizer]],
   futurePool: FuturePool)
   extends NameRecognizerService[Future] {
   
@@ -28,7 +28,7 @@ class SafeNameRecognizerService(
     Future {
       recognizers.get(lang)
     } flatMap {
-      case Some(queue) => Future.value(queue.take())
+      case Some(queue) => queue.poll()
       case None => loadRecognizer(lang)
     }
 
@@ -51,6 +51,8 @@ class SafeNameRecognizerService(
 }
 
 object SafeNameRecognizerService {
+  val futurePoolName = "NameRecognizerServiceFuturePool"
+
   /**
    * An asynchronous constructor that creates a `NameRecognizerService` with a
    * future pool backed by an `ExecutorService` for blocking operations and with
@@ -65,7 +67,7 @@ object SafeNameRecognizerService {
       langs map { lang =>
         Future.const {
           NameRecognizer.create(lang, numRecognizers) map { recognizers =>
-            val queue = new ArrayBlockingQueue[NameRecognizer](numRecognizers)
+            val queue = new AsyncQueue[NameRecognizer]
 
             recognizers foreach { recognizer => queue.offer(recognizer) }
 
@@ -74,7 +76,12 @@ object SafeNameRecognizerService {
         }
       }
     } map { recognizers =>
-      val futurePool = FuturePool(Executors.newFixedThreadPool(numThreads))
+      val futurePool = FuturePool(
+        Executors.newFixedThreadPool(
+          numThreads,
+          new NamedPoolThreadFactory(futurePoolName, makeDaemons = true)
+        )
+      )
 
       new SafeNameRecognizerService(recognizers.toMap, futurePool)
     }
