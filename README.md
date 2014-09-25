@@ -3,8 +3,7 @@ Named-entity recognition with Finagle
 
 This project is a demonstration of how you can use Finagle to build a service
 that will identify names of people, places, and organizations in any text you
-throw at it. It's currently a work in progress, and is not intended for public
-use.
+throw at it. It's currently a work in progress.
 
 Quick start
 -----------
